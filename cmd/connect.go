@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/engnhn/hostbook/core"
 	"github.com/engnhn/hostbook/storage"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -76,10 +77,29 @@ var connectCmd = &cobra.Command{
 			return
 		}
 
-		argsSSH := []string{"ssh", "-F", sshConfigPath, name}
+		password, _ := core.GetPassword(name)
 
-		env := os.Environ()
-		if err := syscall.Exec(sshPath, argsSSH, env); err != nil {
+		var argsSSH []string
+		var binPath string
+		var env []string
+
+		sshpassPath, err := exec.LookPath("sshpass")
+		if password != "" && err == nil {
+			fmt.Println("Auto-connecting with stored password...")
+			binPath = sshpassPath
+			argsSSH = []string{"sshpass", "-e", "ssh", "-F", sshConfigPath, name}
+			env = os.Environ()
+			env = append(env, fmt.Sprintf("SSHPASS=%s", password))
+		} else {
+			if password != "" {
+				fmt.Println("Password found but 'sshpass' is not installed. Please enter password manually.")
+			}
+			binPath = sshPath
+			argsSSH = []string{"ssh", "-F", sshConfigPath, name}
+			env = os.Environ()
+		}
+
+		if err := syscall.Exec(binPath, argsSSH, env); err != nil {
 			fmt.Printf("Error executing ssh: %v\n", err)
 		}
 	},
