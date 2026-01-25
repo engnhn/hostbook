@@ -2,12 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"syscall"
 
+	"github.com/creack/pty"
 	"github.com/engnhn/hostbook/core"
 	"github.com/engnhn/hostbook/storage"
+	"golang.org/x/term"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -39,12 +43,10 @@ var connectCmd = &cobra.Command{
 		if len(args) > 0 {
 			name = args[0]
 		} else {
-
 			options := make([]string, len(hosts))
 			for i, h := range hosts {
 				options[i] = h.Name
 			}
-
 			prompt := &survey.Select{
 				Message: "Select a host to connect:",
 				Options: options,
@@ -70,7 +72,6 @@ var connectCmd = &cobra.Command{
 		}
 
 		sshConfigPath := s.GetSSHConfigPath()
-
 		sshPath, err := exec.LookPath("ssh")
 		if err != nil {
 			fmt.Println("Error: ssh executable not found in PATH.")
@@ -79,30 +80,102 @@ var connectCmd = &cobra.Command{
 
 		password, _ := core.GetPassword(name)
 
-		var argsSSH []string
-		var binPath string
-		var env []string
+		c := exec.Command(sshPath, "-F", sshConfigPath, name)
 
-		sshpassPath, err := exec.LookPath("sshpass")
-		if password != "" && err == nil {
-			fmt.Println("Auto-connecting with stored password...")
-			binPath = sshpassPath
-			argsSSH = []string{"sshpass", "-e", "ssh", "-F", sshConfigPath, name}
-			env = os.Environ()
-			env = append(env, fmt.Sprintf("SSHPASS=%s", password))
-		} else {
-			if password != "" {
-				fmt.Println("Password found but 'sshpass' is not installed. Please enter password manually.")
+		if password == "" {
+
+			env := os.Environ()
+			argsSSH := []string{"ssh", "-F", sshConfigPath, name}
+			if err := syscall.Exec(sshPath, argsSSH, env); err != nil {
+				fmt.Printf("Error executing ssh: %v\n", err)
 			}
-			binPath = sshPath
-			argsSSH = []string{"ssh", "-F", sshConfigPath, name}
-			env = os.Environ()
+			return
 		}
 
-		if err := syscall.Exec(binPath, argsSSH, env); err != nil {
-			fmt.Printf("Error executing ssh: %v\n", err)
+		fmt.Println("Auto-connecting with stored password...")
+
+		ptmx, err := pty.Start(c)
+		if err != nil {
+			fmt.Printf("Error starting PTY: %v\n", err)
+			return
+		}
+		defer func() { _ = ptmx.Close() }()
+
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGWINCH)
+		go func() {
+			for range ch {
+				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+
+				}
+			}
+		}()
+		ch <- syscall.SIGWINCH
+
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+
+			fmt.Printf("Warning: failed to set raw mode: %v\n", err)
+		} else {
+			defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
+		}
+
+		go func() {
+			_, _ = io.Copy(ptmx, os.Stdin)
+		}()
+
+		buf := make([]byte, 1024)
+		passwordSent := false
+
+		for {
+			n, err := ptmx.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+
+				if pathErr, ok := err.(*os.PathError); ok && pathErr.Err == syscall.EIO {
+					break
+				}
+				break
+			}
+
+			os.Stdout.Write(buf[:n])
+
+			if !passwordSent {
+				output := string(buf[:n])
+
+				if containsPasswordPrompt(output) {
+					_, _ = ptmx.Write([]byte(password + "\n"))
+					passwordSent = true
+				}
+			}
 		}
 	},
+}
+
+func containsPasswordPrompt(s string) bool {
+
+	lower := ""
+	for _, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			lower += string(r + 32)
+		} else {
+			lower += string(r)
+		}
+	}
+
+	return (len(lower) > 5 && (contains(lower, "password:") || contains(lower, "passphrase")))
+}
+
+func contains(s, substr string) bool {
+
+	for i := 0; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

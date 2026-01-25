@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -60,13 +59,6 @@ var setupCmd = &cobra.Command{
 		fmt.Printf("Successfully added configuration to %s\n", configFile)
 		fmt.Println("Please restart your terminal or run this command to apply changes:")
 		fmt.Printf("source %s\n", configFile)
-
-		// Check for sshpass
-		if _, err := exec.LookPath("sshpass"); err != nil {
-			fmt.Println("\n[Suggestion] Install 'sshpass' to enable auto-connect feature:")
-			fmt.Println("  sudo apt install sshpass  (Debian/Ubuntu)")
-			fmt.Println("  brew install sshpass      (macOS)")
-		}
 	},
 }
 

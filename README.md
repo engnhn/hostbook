@@ -66,7 +66,7 @@ hostbook delete legacy-app
 #### Security & Auto-Connect
 Hostbook securely stores passwords in your OS keyring (Keychain/SecretService).
 -   **Add**: Prompts to save password securely.
--   **Connect**: Auto-fills password if `sshpass` is installed.
+-   **Connect**: Auto-fills password natively if one is saved. No external tools required.
 
 #### Shell Completion
 Get dynamic tab completion for your host names.
