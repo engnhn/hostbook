@@ -1,0 +1,14 @@
+# Binaries
+hostbook
+
+# IDEs
+.idea/
+.vscode/
+
+# Hostbook local data (should not be committed)
+.hostbook/
+hosts.json
+ssh_config
+
+# OS specific
+.DS_Store
