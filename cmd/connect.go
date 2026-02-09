@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"sort"
 	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 	"github.com/engnhn/hostbook/core"
@@ -40,12 +42,20 @@ var connectCmd = &cobra.Command{
 			return
 		}
 
+		sort.Slice(hosts, func(i, j int) bool {
+			return hosts[i].LastConnected > hosts[j].LastConnected
+		})
+
 		if len(args) > 0 {
 			name = args[0]
 		} else {
 			options := make([]string, len(hosts))
 			for i, h := range hosts {
-				options[i] = h.Name
+				if h.LastConnected > 0 {
+					options[i] = fmt.Sprintf("%s (last: %s)", h.Name, time.Unix(h.LastConnected, 0).Format("2006-01-02 15:04"))
+				} else {
+					options[i] = h.Name
+				}
 			}
 			prompt := &survey.Select{
 				Message: "Select a host to connect:",
@@ -55,6 +65,14 @@ var connectCmd = &cobra.Command{
 			if err != nil {
 				fmt.Printf("Selection failed: %v\n", err)
 				return
+			}
+			if idx := len(options); idx > 0 {
+				for i, opt := range options {
+					if opt == name {
+						name = hosts[i].Name
+						break
+					}
+				}
 			}
 		}
 
@@ -69,6 +87,17 @@ var connectCmd = &cobra.Command{
 		if !found {
 			fmt.Printf("Host '%s' not found.\n", name)
 			return
+		}
+
+		// Update LastConnected timestamp
+		for i := range hosts {
+			if hosts[i].Name == name {
+				hosts[i].LastConnected = time.Now().Unix()
+				if err := s.SaveHosts(hosts); err != nil {
+					fmt.Printf("Warning: failed to update history: %v\n", err)
+				}
+				break
+			}
 		}
 
 		sshConfigPath := s.GetSSHConfigPath()

@@ -1,12 +1,13 @@
 package core
 
 type Host struct {
-	Name         string   `json:"name"`
-	Hostname     string   `json:"hostname"`
-	User         string   `json:"user"`
-	Port         string   `json:"port"`
-	IdentityFile string   `json:"identity_file,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
+	Name          string   `json:"name"`
+	Hostname      string   `json:"hostname"`
+	User          string   `json:"user"`
+	Port          string   `json:"port"`
+	IdentityFile  string   `json:"identity_file,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
+	LastConnected int64    `json:"last_connected,omitempty"`
 }
 
 type Config struct {
