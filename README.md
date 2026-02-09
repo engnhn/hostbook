@@ -23,6 +23,14 @@ Hostbook is built on honest constraints:
 2.  **Local Sovereignty**: Your server data lives effectively in `~/.hostbook/hosts.json` on your machine. No cloud sync, no tracking, no "account required".
 3.  **Interactive by Default**: Don't remember the server name? Just type `hostbook connect` and pick from the list.
 
+## Documentation
+
+For detailed guides, check the **[Hostbook Wiki](https://github.com/engnhn/hostbook/wiki)**:
+-   **[Installation](https://github.com/engnhn/hostbook/wiki/Installation)**
+-   **[Usage Guide](https://github.com/engnhn/hostbook/wiki/Usage)**
+-   **[Configuration & Internals](https://github.com/engnhn/hostbook/wiki/Configuration)**
+-   **[Troubleshooting](https://github.com/engnhn/hostbook/wiki/Troubleshooting)**
+
 ## Usage
 
 ### 1. Simple Management
