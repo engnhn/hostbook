@@ -33,6 +33,11 @@ func NewStorage() (*Storage, error) {
 		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	socketsDir := filepath.Join(configDir, "sockets")
+	if err := os.MkdirAll(socketsDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create sockets directory: %w", err)
+	}
+
 	return &Storage{
 		filePath:      filepath.Join(configDir, hostsFileName),
 		sshConfigPath: filepath.Join(configDir, sshConfigName),

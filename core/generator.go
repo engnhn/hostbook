@@ -20,6 +20,9 @@ func GenerateSSHConfig(hosts []Host) string {
 		if host.IdentityFile != "" {
 			sb.WriteString(fmt.Sprintf("    IdentityFile %s\n", host.IdentityFile))
 		}
+		sb.WriteString("    ControlMaster auto\n")
+		sb.WriteString("    ControlPath ~/.hostbook/sockets/%r@%h:%p\n")
+		sb.WriteString("    ControlPersist 10m\n")
 		sb.WriteString("\n")
 	}
 
